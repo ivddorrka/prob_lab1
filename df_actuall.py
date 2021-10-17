@@ -20,29 +20,31 @@ def process_data(path: str) -> tuple:
     df = pd.read_csv (path)
 
     all_words, good, bad = [], [], []
-
+    num_neutral = 0
+    num_bad = 0
     stopwords = read_stopwords("stop_words.txt")
 
     for tweet, label in zip(df["tweet"], df["label"]):
         sentence = list(filter(None, re.sub("[^A-Za-z ]", "", tweet).strip().split(' ')))
         cleaned_sentence = list(filter(lambda x: x not in stopwords, sentence))
-        # print(label)
         if label=='neutral':
             for word in range(len(cleaned_sentence)):
                 good.append(cleaned_sentence[word])
                 if cleaned_sentence[word] not in all_words:
                     all_words.append(cleaned_sentence[word])
+            num_neutral += 1
         else:
             for word in range(len(cleaned_sentence)):
                 bad.append(cleaned_sentence[word])
                 if cleaned_sentence[word] not in all_words:
                     all_words.append(cleaned_sentence[word])
+            num_bad += 1
         
 
 
     dict_1 = get_lst_01(good, bad, all_words)
     
-    return dict_1, good, bad, len(all_words)
+    return dict_1, good, bad, len(all_words), num_bad, num_neutral
 
 
 
@@ -68,12 +70,11 @@ class BayesianClassifier:
         self.dict_words = self.data[0]
         self.good = self.data[1]
         self.bad = self.data[2]
-        # self.dict_words = {'you': (5, 6, 11), 'good': (15, 6, 21), 'bad': (5, 16, 21), 'ass': (0, 8, 8), 'are': (3, 3, 6)}
-        # self.bad = [5*'you', 5*'bad', 15*'good', 3*'are']
-        # self.good = [6*'you', 16*'bad', 6*'good', 3*'are', 'ass'*8]
         self.stopwords = read_stopwords("stop_words.txt")
-        # self.stopwords = ['is', 'a', 'the']
         self.number_word = self.data[3]
+        self.num_bad = self.data[4]
+        self.num_neutral= self.data[5]
+
 
     def fit(self, X, y):
         """
@@ -91,34 +92,34 @@ class BayesianClassifier:
         :param label: str - label
         :return: float - probability P(label|message)
         """
-        print('already here')
         sentence = list(filter(None, re.sub("[^A-Za-z ]", "", message).strip().split(' ')))
         cleaned_sentence = list(filter(lambda x: x not in self.stopwords, sentence))
         result_probability = 1
         if label=='discrim':
+            result_probability = result_probability*((self.num_bad)/(self.num_neutral+self.num_bad))
             for i in cleaned_sentence:
                 dict_result = self.dict_words.get(i)
                 if dict_result != None:
                     number_bad = dict_result[1]+1
-                    all_words = dict_result[-1]
+                    all_words = dict_result[3]
                 else:
                     number_bad = 1
                     all_words = self.number_word + 1
-
                 result_probability = result_probability*(number_bad/(len(self.bad)+all_words))
         
 
         if label=='neutral':
+            result_probability = result_probability*((self.num_neutral)/(self.num_neutral+self.num_bad))
+            # all_words = 0
             for i in cleaned_sentence:
                 dict_result = self.dict_words.get(i)
                 if dict_result:
                     number_good = dict_result[0]+1
-                    all_words = dict_result[-1]
+                    all_words = dict_result[3]
                 else:
                     number_good = 1
                     all_words =  self.number_word + 1
                 result_probability = result_probability*(number_good/(len(self.good)+all_words))
-        print('counted for one')
         return result_probability
 
     def predict(self, message):
@@ -145,19 +146,14 @@ class BayesianClassifier:
         count = 0
         for i in range(len(X)):
             lab = self.predict(X[i])
-            print(lab)
             if lab==y[i]:
-                print(f'count is {count}')
                 count += 1
-            else:
-                print('counter not adding')
         return (count/(len(y)))*100
 
 
 
 def re_pro_cess(file):
     """ To get X and Y for the class score method"""
-    print('start here')
     df = pd.read_csv (file)
     stopwords = read_stopwords("stop_words.txt")
     lst_first = []
@@ -167,7 +163,6 @@ def re_pro_cess(file):
         cleaned_sentence = ' '.join(list(filter(lambda x: x not in stopwords, sentence)))
         lst_first.append(cleaned_sentence)
         lst_second.append(label)
-    print('done in re_pro_cess here')
     return lst_first, lst_second
 
 
