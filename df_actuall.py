@@ -47,6 +47,7 @@ def process_data(path: str) -> tuple:
 
 
 def get_lst_01(good, bad, all_words):
+    """Dictionary returns tuple of number of times whish word appears in good, bad and the total amount of times"""
     dict_1 = {}
     for i in range(len(all_words)):
         num_in_good = good.count(all_words[i])
@@ -155,6 +156,7 @@ class BayesianClassifier:
 
 
 def re_pro_cess(file):
+    """ To get X and Y for the class score method"""
     print('start here')
     df = pd.read_csv (file)
     stopwords = read_stopwords("stop_words.txt")
